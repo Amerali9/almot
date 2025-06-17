@@ -1,0 +1,560 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>معالج النصوص - Text Processor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+        
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #5D5CDE 0%, #8B5CF6 100%);
+        }
+        
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(93, 92, 222, 0.15);
+        }
+        
+        .dark .feature-card:hover {
+            box-shadow: 0 10px 25px rgba(93, 92, 222, 0.3);
+        }
+        
+        .text-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+        
+        @media (max-width: 640px) {
+            .text-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300 min-h-screen">
+    <!-- Dark mode detection script -->
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+
+    <!-- Header -->
+    <header class="gradient-bg text-white py-6 mb-8">
+        <div class="container mx-auto px-4">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold mb-2">
+                    <i class="fas fa-file-text mr-2"></i>
+                    معالج النصوص
+                </h1>
+                <p class="text-white/80">أداة شاملة لمعالجة وتحرير النصوص العربية والإنجليزية</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 max-w-6xl">
+        <!-- Main Text Area -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">
+                    <i class="fas fa-edit mr-2 text-primary"></i>
+                    منطقة النص
+                </h2>
+                <div class="flex gap-2">
+                    <button onclick="clearText()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                        <i class="fas fa-trash mr-1"></i>
+                        مسح
+                    </button>
+                    <button onclick="copyText()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+                        <i class="fas fa-copy mr-1"></i>
+                        نسخ
+                    </button>
+                </div>
+            </div>
+            
+            <textarea id="textInput" placeholder="اكتب أو الصق النص هنا للبدء في معالجته..." class="w-full h-64 p-4 border border-gray-300 dark:border-gray-600 rounded-lg 
+                             bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white
+                             focus:ring-2 focus:ring-primary focus:border-transparent
+                             resize-none text-base" oninput="updateStats(); processText()"></textarea>
+        </div>
+
+        <!-- Text Statistics -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-chart-bar mr-2 text-primary"></i>
+                إحصائيات النص
+            </h3>
+            
+            <div class="text-stats">
+                <div class="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 
+                           rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="charCount">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">حرف</div>
+                </div>
+                
+                <div class="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 
+                           rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="wordCount">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">كلمة</div>
+                </div>
+                
+                <div class="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 
+                           rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="lineCount">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">سطر</div>
+                </div>
+                
+                <div class="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 
+                           rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-orange-600 dark:text-orange-400" id="sentenceCount">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">جملة</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text Processing Tools -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Text Transformations -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                    <i class="fas fa-magic mr-2 text-primary"></i>
+                    تحويل النص
+                </h3>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="transformText('uppercase')" class="feature-card p-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 
+                                   text-blue-700 dark:text-blue-300 rounded-lg transition-all">
+                        <i class="fas fa-font mb-1"></i>
+                        <div class="text-sm">أحرف كبيرة</div>
+                    </button>
+                    
+                    <button onclick="transformText('lowercase')" class="feature-card p-3 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 
+                                   text-green-700 dark:text-green-300 rounded-lg transition-all">
+                        <i class="fas fa-font mb-1"></i>
+                        <div class="text-sm">أحرف صغيرة</div>
+                    </button>
+                    
+                    <button onclick="transformText('capitalize')" class="feature-card p-3 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 
+                                   text-purple-700 dark:text-purple-300 rounded-lg transition-all">
+                        <i class="fas fa-font mb-1"></i>
+                        <div class="text-sm">حرف أول كبير</div>
+                    </button>
+                    
+                    <button onclick="transformText('reverse')" class="feature-card p-3 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 
+                                   text-red-700 dark:text-red-300 rounded-lg transition-all">
+                        <i class="fas fa-exchange-alt mb-1"></i>
+                        <div class="text-sm">عكس النص</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Text Cleaning -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                    <i class="fas fa-broom mr-2 text-primary"></i>
+                    تنظيف النص
+                </h3>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="cleanText('spaces')" class="feature-card p-3 bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 
+                                   text-yellow-700 dark:text-yellow-300 rounded-lg transition-all">
+                        <i class="fas fa-compress mb-1"></i>
+                        <div class="text-sm">إزالة المسافات</div>
+                    </button>
+                    
+                    <button onclick="cleanText('lines')" class="feature-card p-3 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 
+                                   text-indigo-700 dark:text-indigo-300 rounded-lg transition-all">
+                        <i class="fas fa-align-left mb-1"></i>
+                        <div class="text-sm">إزالة الأسطر الفارغة</div>
+                    </button>
+                    
+                    <button onclick="cleanText('numbers')" class="feature-card p-3 bg-pink-50 dark:bg-pink-900/30 hover:bg-pink-100 dark:hover:bg-pink-900/50 
+                                   text-pink-700 dark:text-pink-300 rounded-lg transition-all">
+                        <i class="fas fa-hashtag mb-1"></i>
+                        <div class="text-sm">إزالة الأرقام</div>
+                    </button>
+                    
+                    <button onclick="cleanText('special')" class="feature-card p-3 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 
+                                   text-teal-700 dark:text-teal-300 rounded-lg transition-all">
+                        <i class="fas fa-at mb-1"></i>
+                        <div class="text-sm">إزالة الرموز</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Find and Replace -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-search mr-2 text-primary"></i>
+                البحث والاستبدال
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <input type="text" id="findText" placeholder="النص المراد البحث عنه" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                              bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                              focus:ring-2 focus:ring-primary focus:border-transparent text-base">
+                
+                <input type="text" id="replaceText" placeholder="النص البديل" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                              bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                              focus:ring-2 focus:ring-primary focus:border-transparent text-base">
+                
+                <button onclick="findAndReplace()" class="px-6 py-2 bg-primary hover:bg-purple-600 text-white rounded-lg transition-colors">
+                    <i class="fas fa-exchange-alt mr-1"></i>
+                    استبدال الكل
+                </button>
+            </div>
+            
+            <div class="text-sm text-gray-600 dark:text-gray-400" id="replaceStatus"></div>
+        </div>
+
+        <!-- Download Options -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-download mr-2 text-primary"></i>
+                تحميل النص
+            </h3>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button onclick="downloadText('txt')" class="feature-card p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 
+                               text-gray-700 dark:text-gray-300 rounded-lg transition-all">
+                    <i class="fas fa-file-alt mb-1"></i>
+                    <div class="text-sm">ملف نصي (.txt)</div>
+                </button>
+                
+                <button onclick="downloadText('html')" class="feature-card p-3 bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 
+                               text-orange-700 dark:text-orange-300 rounded-lg transition-all">
+                    <i class="fas fa-code mb-1"></i>
+                    <div class="text-sm">ملف HTML</div>
+                </button>
+                
+                <button onclick="downloadText('json')" class="feature-card p-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 
+                               text-blue-700 dark:text-blue-300 rounded-lg transition-all">
+                    <i class="fas fa-brackets-curly mb-1"></i>
+                    <div class="text-sm">ملف JSON</div>
+                </button>
+                
+                <button onclick="downloadText('csv')" class="feature-card p-3 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 
+                               text-green-700 dark:text-green-300 rounded-lg transition-all">
+                    <i class="fas fa-table mb-1"></i>
+                    <div class="text-sm">ملف CSV</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-16 py-8 bg-gray-100 dark:bg-gray-800 text-center">
+        <p class="text-gray-600 dark:text-gray-400">
+            <i class="fas fa-heart text-red-500 mx-1"></i>
+            تم تصميم هذا التطبيق لمعالجة النصوص بسهولة وفعالية
+        </p>
+    </footer>
+
+    <script>
+        const textInput = document.getElementById('textInput');
+        
+        // Update text statistics
+        function updateStats() {
+            const text = textInput.value;
+            
+            // Character count
+            document.getElementById('charCount').textContent = text.length;
+            
+            // Word count
+            const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+            document.getElementById('wordCount').textContent = words;
+            
+            // Line count
+            const lines = text.split('\n').length;
+            document.getElementById('lineCount').textContent = lines;
+            
+            // Sentence count (basic detection)
+            const sentences = text.trim() === '' ? 0 : text.split(/[.!?؟]+/).filter(s => s.trim() !== '').length;
+            document.getElementById('sentenceCount').textContent = sentences;
+        }
+        
+        // Transform text functions
+        function transformText(type) {
+            let text = textInput.value;
+            
+            switch(type) {
+                case 'uppercase':
+                    textInput.value = text.toUpperCase();
+                    break;
+                case 'lowercase':
+                    textInput.value = text.toLowerCase();
+                    break;
+                case 'capitalize':
+                    textInput.value = text.split(' ').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                    ).join(' ');
+                    break;
+                case 'reverse':
+                    textInput.value = text.split('').reverse().join('');
+                    break;
+            }
+            
+            updateStats();
+            showNotification('تم تحويل النص بنجاح!', 'success');
+        }
+        
+        // Clean text functions
+        function cleanText(type) {
+            let text = textInput.value;
+            
+            switch(type) {
+                case 'spaces':
+                    textInput.value = text.replace(/\s+/g, ' ').trim();
+                    break;
+                case 'lines':
+                    textInput.value = text.replace(/\n\s*\n/g, '\n').trim();
+                    break;
+                case 'numbers':
+                    textInput.value = text.replace(/\d+/g, '');
+                    break;
+                case 'special':
+                    textInput.value = text.replace(/[^\w\s\u0600-\u06FF]/g, '');
+                    break;
+            }
+            
+            updateStats();
+            showNotification('تم تنظيف النص بنجاح!', 'success');
+        }
+        
+        // Find and replace function
+        function findAndReplace() {
+            const findText = document.getElementById('findText').value;
+            const replaceText = document.getElementById('replaceText').value;
+            const statusElement = document.getElementById('replaceStatus');
+            
+            if (!findText) {
+                showNotification('يرجى إدخال النص المراد البحث عنه', 'error');
+                return;
+            }
+            
+            const originalText = textInput.value;
+            const newText = originalText.split(findText).join(replaceText);
+            const count = originalText.split(findText).length - 1;
+            
+            textInput.value = newText;
+            updateStats();
+            
+            if (count > 0) {
+                statusElement.textContent = `تم استبدال ${count} مرة`;
+                statusElement.className = 'text-sm text-green-600 dark:text-green-400';
+                showNotification(`تم استبدال ${count} مرة`, 'success');
+            } else {
+                statusElement.textContent = 'لم يتم العثور على النص المطلوب';
+                statusElement.className = 'text-sm text-red-600 dark:text-red-400';
+                showNotification('لم يتم العثور على النص المطلوب', 'warning');
+            }
+        }
+        
+        // Download text functions
+        function downloadText(format) {
+            const text = textInput.value;
+            if (!text.trim()) {
+                showNotification('لا يوجد نص للتحميل', 'error');
+                return;
+            }
+            
+            let content, filename, mimeType;
+            
+            switch(format) {
+                case 'txt':
+                    content = text;
+                    filename = 'processed_text.txt';
+                    mimeType = 'text/plain';
+                    break;
+                case 'html':
+                    content = `<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>النص المعالج</title>
+    <style>body { font-family: Arial, sans-serif; padding: 20px; }</style>
+</head>
+<body>
+    <h1>النص المعالج</h1>
+    <pre>${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+</body>
+</html>`;
+                    filename = 'processed_text.html';
+                    mimeType = 'text/html';
+                    break;
+                case 'json':
+                    const stats = {
+                        content: text,
+                        statistics: {
+                            characters: text.length,
+                            words: text.trim() === '' ? 0 : text.trim().split(/\s+/).length,
+                            lines: text.split('\n').length,
+                            sentences: text.trim() === '' ? 0 : text.split(/[.!?؟]+/).filter(s => s.trim() !== '').length
+                        },
+                        timestamp: new Date().toISOString()
+                    };
+                    content = JSON.stringify(stats, null, 2);
+                    filename = 'processed_text.json';
+                    mimeType = 'application/json';
+                    break;
+                case 'csv':
+                    const lines = text.split('\n');
+                    content = 'رقم السطر,المحتوى\n' + lines.map((line, index) => 
+                        `${index + 1},"${line.replace(/"/g, '""')}"`
+                    ).join('\n');
+                    filename = 'processed_text.csv';
+                    mimeType = 'text/csv';
+                    break;
+            }
+            
+            const blob = new Blob([content], { type: mimeType + ';charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('تم تحميل الملف بنجاح!', 'success');
+        }
+        
+        // Utility functions
+        function clearText() {
+            if (textInput.value.trim() && !confirm('هل أنت متأكد من مسح النص؟')) {
+                return;
+            }
+            textInput.value = '';
+            updateStats();
+            document.getElementById('replaceStatus').textContent = '';
+            showNotification('تم مسح النص', 'info');
+        }
+        
+        function copyText() {
+            if (!textInput.value.trim()) {
+                showNotification('لا يوجد نص للنسخ', 'error');
+                return;
+            }
+            
+            textInput.select();
+            document.execCommand('copy');
+            showNotification('تم نسخ النص بنجاح!', 'success');
+        }
+        
+        function processText() {
+            // This function can be extended for real-time processing
+        }
+        
+        // Notification system
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform translate-x-full`;
+            
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                warning: 'bg-yellow-500 text-white',
+                info: 'bg-blue-500 text-white'
+            };
+            
+            notification.className += ` ${colors[type] || colors.info}`;
+            
+            const icons = {
+                success: 'fas fa-check-circle',
+                error: 'fas fa-exclamation-circle',
+                warning: 'fas fa-exclamation-triangle',
+                info: 'fas fa-info-circle'
+            };
+            
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="${icons[type] || icons.info} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        // Initialize
+        updateStats();
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'u':
+                        e.preventDefault();
+                        transformText('uppercase');
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        transformText('lowercase');
+                        break;
+                    case 'h':
+                        e.preventDefault();
+                        findAndReplace();
+                        break;
+                }
+            }
+        });
+    </script>
+
+
+</body></html>
